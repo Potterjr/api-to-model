@@ -23,6 +23,12 @@ npm run watch     # tsc --watch
 
 Press `F5` in VS Code to launch an Extension Development Host with the extension loaded.
 
+To install the extension into your own VS Code instead:
+
+```bash
+npm run install-local   # package to .vsix, then install it
+```
+
 ## Architecture
 
 Business logic is deliberately free of any `vscode` import, so it is testable in plain Node:

@@ -18,6 +18,25 @@
   "activationEvents": [],
   "main": "./out/extension.js",
   "contributes": {
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "apiToModel",
+          "title": "API to Model",
+          "icon": "media/icon.svg"
+        }
+      ]
+    },
+    "views": {
+      "apiToModel": [
+        {
+          "type": "webview",
+          "id": "apiToModel.sidebar",
+          "name": "Request",
+          "contextualTitle": "API to Model"
+        }
+      ]
+    },
     "commands": [
       {
         "command": "apiToModel.newRequest",

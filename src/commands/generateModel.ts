@@ -1,20 +1,22 @@
 import * as vscode from 'vscode';
-import { RequestPanel } from '../webview/panel';
+import { WebviewController } from '../webview/controller';
+
+const NO_SURFACE = 'Open the API to Model sidebar, or run "API to Model: New Request".';
 
 export function generateModel(): void {
-  const panel = RequestPanel.active;
-  if (!panel) {
-    void vscode.window.showWarningMessage('Run "API to Model: New Request" first.');
+  const controller = WebviewController.active;
+  if (!controller) {
+    void vscode.window.showWarningMessage(NO_SURFACE);
     return;
   }
-  panel.triggerGenerate();
+  controller.triggerGenerate();
 }
 
 export async function insertModel(): Promise<void> {
-  const panel = RequestPanel.active;
-  if (!panel) {
-    void vscode.window.showWarningMessage('Run "API to Model: New Request" first.');
+  const controller = WebviewController.active;
+  if (!controller) {
+    void vscode.window.showWarningMessage(NO_SURFACE);
     return;
   }
-  await panel.insertLastModel();
+  await controller.insertLastModel();
 }

@@ -1,5 +1,9 @@
+/*
+ * One stylesheet for both surfaces: a wide editor panel and a ~300px sidebar.
+ * Rows wrap rather than overflow, so nothing needs a width media query.
+ */
 body {
-  padding: 16px;
+  padding: 12px;
   font-family: var(--vscode-font-family);
   font-size: var(--vscode-font-size);
   color: var(--vscode-foreground);
@@ -49,12 +53,24 @@ body {
 .row {
   display: flex;
   align-items: center;
+  flex-wrap: wrap;
   gap: 8px;
   margin-top: 8px;
 }
 
 .row.spread {
   justify-content: space-between;
+}
+
+.row.actions {
+  margin-top: 0;
+}
+
+/* Sized to its content: stretching "Dart" across a wide panel looks broken. */
+#language {
+  flex: 0 1 auto;
+  min-width: 80px;
+  max-width: 220px;
 }
 
 textarea,
@@ -115,7 +131,7 @@ button:disabled {
 }
 
 .code {
-  max-height: 380px;
+  max-height: 45vh;
   margin: 0;
   padding: 10px;
   overflow: auto;
@@ -128,7 +144,7 @@ button:disabled {
 }
 
 .code.muted {
-  max-height: 160px;
+  max-height: 25vh;
   opacity: 0.75;
 }
 

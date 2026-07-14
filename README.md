@@ -4,7 +4,12 @@ A VS Code extension: paste a cURL command, send the request, and turn the JSON r
 
 ## Usage
 
-Command Palette → **API to Model: New Request**. The panel takes input two ways:
+Two surfaces, same UI:
+
+- **Sidebar** — click the `{↓}` icon in the activity bar. Stays docked while you work.
+- **Editor panel** — Command Palette → **API to Model: New Request**. More room for large responses.
+
+Both take input two ways:
 
 **cURL tab** — paste a cURL command, hit **Send** (or `Cmd`/`Ctrl` + `Enter`). Status, timing, headers and pretty-printed JSON come back.
 
@@ -39,8 +44,13 @@ Business logic is deliberately free of any `vscode` import, so it is testable in
 | `src/core/httpClient.ts` | replays a parsed request via axios |
 | `src/core/generators/ModelGenerator.ts` | language registry |
 | `src/core/generators/dartGenerator.ts` | Dart implementation |
-| `src/webview/panel.ts` | webview lifecycle + message routing |
+| `src/webview/controller.ts` | message handling + state, shared by both surfaces |
+| `src/webview/html.ts` | the markup, shared by both surfaces |
+| `src/webview/panel.ts` | editor-panel lifecycle |
+| `src/webview/sidebar.ts` | activity-bar view lifecycle |
 | `src/commands/` | thin command handlers |
+
+The sidebar and the panel are two hosts around one `WebviewController`. Each host owns a controller and marks it focused when it becomes visible; the palette commands act on whichever was focused last. One stylesheet covers both — rows wrap instead of overflowing, so a 200px sidebar and a 1400px panel both work without a media query.
 
 ### Adding a language
 

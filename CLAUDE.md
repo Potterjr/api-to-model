@@ -43,7 +43,10 @@ api-to-model/
 │   │       ├── ModelGenerator.ts # registry กลาง (รองรับหลายภาษา)
 │   │       └── dartGenerator.ts  # implement เฉพาะ Dart
 │   ├── webview/
-│   │   ├── panel.ts
+│   │   ├── controller.ts         # message handling + state ใช้ร่วมกัน 2 surface
+│   │   ├── html.ts               # markup ใช้ร่วมกัน 2 surface
+│   │   ├── panel.ts              # editor panel lifecycle
+│   │   ├── sidebar.ts            # activity bar view lifecycle
 │   │   └── ui/                   # main.js, style.css สำหรับ webview
 │   └── types/
 │       └── index.ts
@@ -243,10 +246,19 @@ class Documents {
 
 **Whitespace:** ยึดตาม `dart format` (page width 80) — มีบรรทัดว่างคั่นระหว่าง field declarations / constructor / `fromJson` / `toJson` และคั่นระหว่าง class
 
+## Surface (UI มี 2 ที่ ใช้โค้ดชุดเดียวกัน)
+
+- **Sidebar** — icon `{↓}` บน activity bar (`src/webview/sidebar.ts`)
+- **Editor panel** — Command Palette → New Request (`src/webview/panel.ts`)
+
+ทั้งคู่เป็นแค่ host ครอบ `WebviewController` ตัวเดียวกัน แต่ละ host ถือ controller ของตัวเองแล้ว `markFocused()` ตอนที่ visible — palette command จะยิงไปที่ตัวที่ focus ล่าสุด **ห้าม duplicate markup หรือ message handling ระหว่างสอง surface** ถ้าจะเพิ่ม UI ให้แก้ที่ `html.ts` / `controller.ts` ที่เดียว
+
+**CSS ต้อง responsive:** sidebar แคบได้ถึง ~200px ส่วน panel กว้างได้เป็น 1400px ใช้ stylesheet เดียวกัน ใช้วิธี `flex-wrap` ให้ row ยุบตัวแทนการล้น ไม่ต้องใช้ media query
+
 ## User Flow ของ Extension
 
-1. เปิด Command Palette → `API to Model: New Request`
-2. Webview panel เปิดขึ้นมา เลือก tab **cURL** หรือ **JSON**
+1. เปิด sidebar จาก activity bar หรือ Command Palette → `API to Model: New Request`
+2. เลือก tab **cURL** หรือ **JSON**
 3. **cURL** — paste curl แล้วกด **Send** → parse curl → ยิง request → แสดง response JSON
    **JSON** — paste JSON แล้วกด **Use this JSON** → validate → ข้ามไปข้อ 4 เลย
 4. กด **Generate** → ใส่ชื่อ class หลัก (เช่น `LoadDocument`) → เลือกภาษา (ตอนนี้มีแค่ Dart) → แสดง preview code

@@ -7,10 +7,17 @@ export class ModelGenerationError extends Error {
   }
 }
 
+/**
+ * `num` is the supertype of both `int` and `double`, so every JSON number maps to
+ * it. JSON itself has one number type and `JSON.parse` hands back `1.0` as `1`,
+ * which makes a narrower guess unreliable at runtime.
+ */
+type DartPrimitive = 'String' | 'num' | 'bool';
+
 type DartType =
-  | { kind: 'primitive'; name: 'String' | 'int' | 'double' | 'bool' }
+  | { kind: 'primitive'; name: DartPrimitive }
   | { kind: 'class'; name: string }
-  | { kind: 'listPrimitive'; element: 'String' | 'int' | 'double' | 'bool' }
+  | { kind: 'listPrimitive'; element: DartPrimitive }
   | { kind: 'listClass'; element: string };
 
 interface DartField {
@@ -96,7 +103,7 @@ function resolveType(key: string, value: unknown, build: BuildFn): DartType {
     return { kind: 'primitive', name: 'bool' };
   }
   if (typeof value === 'number') {
-    return { kind: 'primitive', name: Number.isInteger(value) ? 'int' : 'double' };
+    return { kind: 'primitive', name: 'num' };
   }
   if (Array.isArray(value)) {
     return resolveArrayType(key, value, build);
@@ -128,8 +135,7 @@ function resolveArrayType(key: string, items: unknown[], build: BuildFn): DartTy
     return { kind: 'listPrimitive', element: 'bool' };
   }
   if (typeof first === 'number') {
-    const allInt = present.every((item) => typeof item === 'number' && Number.isInteger(item));
-    return { kind: 'listPrimitive', element: allInt ? 'int' : 'double' };
+    return { kind: 'listPrimitive', element: 'num' };
   }
   return { kind: 'listPrimitive', element: 'String' };
 }

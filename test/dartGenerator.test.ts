@@ -12,11 +12,18 @@ describe('DartGenerator — the CLAUDE.md reference case', () => {
 
 describe('DartGenerator — type mapping', () => {
   it('maps each JSON primitive to its nullable Dart type', () => {
-    const out = generate('M', { s: 'a', i: 1, d: 1.5, b: true });
+    const out = generate('M', { s: 'a', b: true });
     expect(out).toContain('  String? s;');
-    expect(out).toContain('  int? i;');
-    expect(out).toContain('  double? d;');
     expect(out).toContain('  bool? b;');
+  });
+
+  it('maps every number to num?, whatever its precision', () => {
+    const out = generate('M', { whole: 1, fraction: 1.5, big: 9007199254740993, negative: -2 });
+    expect(out).toContain('  num? whole;');
+    expect(out).toContain('  num? fraction;');
+    expect(out).toContain('  num? big;');
+    expect(out).toContain('  num? negative;');
+    expect(out).not.toMatch(/\b(int|double)\?/);
   });
 
   it('defaults an unknown null to String?', () => {
@@ -48,8 +55,8 @@ describe('DartGenerator — type mapping', () => {
 
   it('types a list of primitives by its real element type', () => {
     expect(generate('M', { tags: ['a'] })).toContain('  List<String>? tags;');
-    expect(generate('M', { ids: [1, 2] })).toContain('  List<int>? ids;');
-    expect(generate('M', { rates: [1, 2.5] })).toContain('  List<double>? rates;');
+    expect(generate('M', { ids: [1, 2] })).toContain('  List<num>? ids;');
+    expect(generate('M', { rates: [1, 2.5] })).toContain('  List<num>? rates;');
     expect(generate('M', { flags: [true] })).toContain('  List<bool>? flags;');
   });
 
@@ -118,7 +125,7 @@ describe('DartGenerator — nested structures', () => {
         { id: 7, name: 'b', extra: true },
       ],
     });
-    expect(out).toContain('  int? id;');
+    expect(out).toContain('  num? id;');
     expect(out).toContain('  String? name;');
     expect(out).toContain('  bool? extra;');
   });

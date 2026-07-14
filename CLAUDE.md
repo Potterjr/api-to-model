@@ -12,8 +12,10 @@
 
 ## Feature หลัก
 
-1. **Input cURL** — รับ cURL command จากผู้ใช้ (paste เข้ามาแบบ multi-line ได้)
-2. **Send API** — parse cURL แล้วยิง HTTP request จริงจาก extension
+1. **Input** — เลือกได้ 2 แบบผ่าน tab ใน webview
+   - **cURL** — paste cURL command (multi-line ได้) แล้วให้ extension ยิง request ให้
+   - **JSON** — paste JSON response ที่มีอยู่แล้วตรง ๆ ข้ามขั้นยิง request ไปเลย
+2. **Send API** — parse cURL แล้วยิง HTTP request จริงจาก extension (เฉพาะ cURL mode)
 3. **Get response JSON** — แสดงผล response ที่ได้ (pretty-print + validate ว่าเป็น JSON ที่ถูกต้อง)
 4. **JSON → Model** — แปลง JSON เป็น model class โดยเลือกภาษาได้ (ตอนนี้ implement แค่ **Dart**, ออกแบบ interface ให้ต่อยอดภาษาอื่นทีหลังง่าย)
 
@@ -55,9 +57,11 @@ api-to-model/
 
 ## รายละเอียด Feature
 
-### 1. Input cURL
+### 1. Input (cURL / JSON)
 
-- รับ input จาก textarea ใน webview รองรับ curl หลายบรรทัด (มี `\` ต่อท้ายบรรทัด)
+- webview มี 2 tab: **cURL** และ **JSON** สลับ tab แล้ว output เดิมบนจอต้องถูก reset (ข้อมูลคนละชุดกัน)
+- **JSON mode** — validate ด้วย `JSON.parse` ถ้าไม่ผ่านให้แจ้ง error ของ parser ตรง ๆ ถ้าผ่านให้ข้ามไปขั้น generate เลย ไม่ยิง request
+- **cURL mode** — รับ input จาก textarea รองรับ curl หลายบรรทัด (มี `\` ต่อท้ายบรรทัด)
 - Parse สิ่งต่อไปนี้เป็นอย่างน้อย:
   - `-X` / `--request` → HTTP method
   - URL (argument ที่ไม่มี flag นำหน้า)
@@ -114,15 +118,16 @@ curl -X 'POST' \
 | ชื่อ class ย่อย (nested object / array ของ object) | Capitalize ชื่อ key นั้น เช่น key `documents` → class `Documents` |
 | ชื่อ field | แปลง `snake_case` → `camelCase` เช่น `document_type` → `documentType` |
 | type: string | → `String?` |
-| type: number (int) | → `int?` |
-| type: number (double) | → `double?` |
+| type: number (int / double / long ทุกกรณี) | → **`num?`** เสมอ |
 | type: boolean | → `bool?` |
 | type: object | → nested class ชื่อตาม key, เป็น `ClassName?` |
 | type: array ของ object | → `List<ClassName>?` |
-| type: array ของ primitive | → `List<String>?` / `List<int>?` ตามชนิดข้อมูลจริง |
+| type: array ของ primitive | → `List<String>?` / `List<num>?` ตามชนิดข้อมูลจริง |
 | type: null (ไม่รู้ชนิดจริง) | **default เป็น `String?`** ยกเว้น field ที่ชื่อขึ้นต้นด้วย `is_` หรือ `has_` ให้ default เป็น `bool?` |
 | nullability | ทุก field เป็น nullable (`?`) หมด เพื่อความปลอดภัยตอน parse JSON จริงที่อาจไม่ครบ field |
 | output ที่ต้อง generate ต่อ class | constructor (named params), `fromJson`, `toJson` ตาม pattern ตัวอย่าง |
+
+**ทำไม number ถึงเป็น `num?` ทั้งหมด:** JSON มี number type เดียว และ `JSON.parse` คืน `1.0` มาเป็น `1` — การเดาว่าเป็น `int` หรือ `double` จาก sample เดียวจึงพังทันทีที่ field ที่ sample เป็น `3` ยิงจริงแล้วได้ `3.5` `num` เป็น supertype ของทั้ง `int` และ `double` เลย parse ได้ทั้งคู่ ถ้าต้องการชนิดที่แคบกว่าให้ narrow ที่ call site ด้วย `.toInt()` / `.toDouble()`
 
 **ตัวอย่างอ้างอิง (ใช้เป็น test case หลักในการ implement/verify ทุกครั้งที่แก้ generator):**
 
@@ -241,10 +246,11 @@ class Documents {
 ## User Flow ของ Extension
 
 1. เปิด Command Palette → `API to Model: New Request`
-2. Webview panel เปิดขึ้นมา ให้ paste cURL command ลงไป
-3. กด **Send** → extension parse curl → ยิง request → แสดง response JSON
-4. กด **Generate Model** → ใส่ชื่อ class หลัก (เช่น `LoadDocument`) → เลือกภาษา (ตอนนี้มีแค่ Dart) → แสดง preview code
-5. กด **Copy** หรือ **Insert to file** / **Save as .dart file**
+2. Webview panel เปิดขึ้นมา เลือก tab **cURL** หรือ **JSON**
+3. **cURL** — paste curl แล้วกด **Send** → parse curl → ยิง request → แสดง response JSON
+   **JSON** — paste JSON แล้วกด **Use this JSON** → validate → ข้ามไปข้อ 4 เลย
+4. กด **Generate** → ใส่ชื่อ class หลัก (เช่น `LoadDocument`) → เลือกภาษา (ตอนนี้มีแค่ Dart) → แสดง preview code
+5. กด **Copy** หรือ **Insert into editor** / **Save as file**
 
 ## VS Code Commands
 
@@ -283,6 +289,7 @@ class Documents {
 ## ข้อควรระวังสำหรับ AI เวลาช่วย implement โค้ดในโปรเจกต์นี้
 
 - ยึด conversion rules และตัวอย่าง Dart output ด้านบนเป็นมาตรฐานเทียบผลลัพธ์ทุกครั้งที่แก้ generator — รัน `npm test` ทุกครั้ง
+- number ทุกกรณี (int / double / long) → `num?` เท่านั้น ห้าม generate เป็น `int?` หรือ `double?`
 - ห้ามเปลี่ยนชื่อ field เพี้ยนไปจาก JSON key เดิม (แปลงแค่ `snake_case` → `camelCase` เท่านั้น) ข้อยกเว้นเดียวคือ Dart reserved word จะถูกเติม `$` ต่อท้ายเพื่อให้ compile ผ่าน (`class` → `class$`) โดย JSON key ยังคงเดิม
 - field ที่เจอค่า `null` ในตัวอย่าง JSON ให้ default type เป็น `String?` เสมอ ยกเว้นชื่อขึ้นต้นด้วย `is_`/`has_` ให้เป็น `bool?`
 - ทุก field เป็น nullable ทั้งหมด ห้าม generate เป็น non-nullable

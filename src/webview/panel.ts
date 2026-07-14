@@ -5,7 +5,7 @@ import { getGenerator, listGenerators } from '../core/generators/ModelGenerator'
 import { ModelGenerationError } from '../core/generators/dartGenerator';
 
 interface WebviewMessage {
-  type: 'send' | 'generate' | 'copy' | 'insert' | 'save';
+  type: 'send' | 'json' | 'generate' | 'copy' | 'insert' | 'save';
   curl?: string;
   rootClassName?: string;
   language?: string;
@@ -86,6 +86,9 @@ export class RequestPanel {
       case 'send':
         await this.send(message.curl ?? '');
         break;
+      case 'json':
+        this.loadJson(message.text ?? '');
+        break;
       case 'generate':
         this.generate(message.rootClassName ?? '', message.language ?? 'dart');
         break;
@@ -138,6 +141,29 @@ export class RequestPanel {
         message: error instanceof HttpRequestError ? error.message : String(error),
       });
     }
+  }
+
+  /** Skips the request entirely: the user already has the JSON in hand. */
+  private loadJson(text: string): void {
+    let parsed: unknown;
+    try {
+      parsed = JSON.parse(text);
+    } catch (error) {
+      this.lastJson = undefined;
+      this.post({
+        type: 'error',
+        stage: 'parse',
+        message: `Not valid JSON — ${error instanceof Error ? error.message : String(error)}`,
+      });
+      return;
+    }
+
+    this.lastJson = parsed;
+    this.post({
+      type: 'jsonLoaded',
+      body: JSON.stringify(parsed, null, 2),
+      canGenerate: isPlainObject(parsed),
+    });
   }
 
   private generate(rootClassName: string, language: string): void {
@@ -203,20 +229,40 @@ export class RequestPanel {
 </head>
 <body>
   <section class="block">
-    <label class="label" for="curl">cURL command</label>
-    <textarea id="curl" spellcheck="false" rows="10" placeholder="curl -X 'POST' \\
+    <div class="tabs" role="tablist">
+      <button id="tab-curl" class="tab active" role="tab" aria-selected="true">cURL</button>
+      <button id="tab-json" class="tab" role="tab" aria-selected="false">JSON</button>
+    </div>
+
+    <div id="pane-curl" role="tabpanel">
+      <label class="label" for="curl">cURL command</label>
+      <textarea id="curl" spellcheck="false" rows="10" placeholder="curl -X 'POST' \\
   'http://testapi' \\
   -H 'accept: text/plain' \\
   -d '{ &quot;keyword&quot;: &quot;string&quot; }'"></textarea>
-    <div class="row">
-      <button id="send" class="primary">Send</button>
-      <span id="status" class="status"></span>
+      <div class="row">
+        <button id="send" class="primary">Send</button>
+        <span id="status" class="status"></span>
+      </div>
+    </div>
+
+    <div id="pane-json" role="tabpanel" hidden>
+      <label class="label" for="json">JSON</label>
+      <textarea id="json" spellcheck="false" rows="10" placeholder="{
+  &quot;documents&quot;: [
+    { &quot;document_type&quot;: null, &quot;truck_load_no&quot;: &quot;SHIP20260213-N2&quot; }
+  ]
+}"></textarea>
+      <div class="row">
+        <button id="use-json" class="primary">Use this JSON</button>
+        <span class="status">Paste a response you already have — no request is sent.</span>
+      </div>
     </div>
   </section>
 
   <section class="block" id="response-block" hidden>
     <div class="row spread">
-      <span class="label">Response</span>
+      <span class="label" id="response-label">Response</span>
       <span id="meta" class="meta"></span>
     </div>
     <pre id="response" class="code"></pre>

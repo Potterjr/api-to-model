@@ -3,11 +3,19 @@
   const vscode = acquireVsCodeApi();
 
   const el = (id) => /** @type {any} */ (document.getElementById(id));
+  const tabCurl = el('tab-curl');
+  const tabJson = el('tab-json');
+  const paneCurl = el('pane-curl');
+  const paneJson = el('pane-json');
   const curl = el('curl');
+  const json = el('json');
   const sendButton = el('send');
+  const useJsonButton = el('use-json');
   const status = el('status');
   const responseBlock = el('response-block');
+  const responseLabel = el('response-label');
   const responseBody = el('response');
+  const headersDetails = el('headers-details');
   const headersBlock = el('headers');
   const meta = el('meta');
   const generateBlock = el('generate-block');
@@ -22,11 +30,12 @@
   // Survives the panel being hidden and re-shown.
   const saved = vscode.getState() || {};
   curl.value = saved.curl || '';
+  json.value = saved.json || '';
   className.value = saved.className || '';
+  let mode = saved.mode === 'json' ? 'json' : 'curl';
 
-  const persist = () => vscode.setState({ curl: curl.value, className: className.value });
-  curl.addEventListener('input', persist);
-  className.addEventListener('input', persist);
+  const persist = () =>
+    vscode.setState({ curl: curl.value, json: json.value, className: className.value, mode });
 
   const showError = (message) => {
     errorBox.textContent = message;
@@ -36,14 +45,47 @@
     errorBox.hidden = true;
   };
 
-  const send = () => {
+  const resetOutput = () => {
+    responseBlock.hidden = true;
+    generateBlock.hidden = true;
+    modelBlock.hidden = true;
+    status.textContent = '';
+  };
+
+  const setMode = (next) => {
+    mode = next;
+    const isCurl = next === 'curl';
+
+    tabCurl.classList.toggle('active', isCurl);
+    tabJson.classList.toggle('active', !isCurl);
+    tabCurl.setAttribute('aria-selected', String(isCurl));
+    tabJson.setAttribute('aria-selected', String(!isCurl));
+    paneCurl.hidden = !isCurl;
+    paneJson.hidden = isCurl;
+
+    // The two inputs produce different JSON, so anything on screen is now stale.
     clearError();
-    if (!curl.value.trim()) {
-      showError('Paste a cURL command first.');
+    resetOutput();
+    persist();
+    (isCurl ? curl : json).focus();
+  };
+
+  const submit = () => {
+    clearError();
+    if (mode === 'curl') {
+      if (!curl.value.trim()) {
+        showError('Paste a cURL command first.');
+        return;
+      }
+      sendButton.disabled = true;
+      vscode.postMessage({ type: 'send', curl: curl.value });
       return;
     }
-    sendButton.disabled = true;
-    vscode.postMessage({ type: 'send', curl: curl.value });
+    if (!json.value.trim()) {
+      showError('Paste a JSON response first.');
+      return;
+    }
+    vscode.postMessage({ type: 'json', text: json.value });
   };
 
   const generate = () => {
@@ -60,18 +102,39 @@
     });
   };
 
-  sendButton.addEventListener('click', send);
+  const afterJson = (message, isLive) => {
+    responseLabel.textContent = isLive ? 'Response' : 'JSON';
+    headersDetails.hidden = !isLive;
+    responseBlock.hidden = false;
+    generateBlock.hidden = !message.canGenerate;
+
+    if (!message.canGenerate) {
+      showError('The JSON root must be an object. Arrays and primitives are not supported yet.');
+    }
+  };
+
+  tabCurl.addEventListener('click', () => setMode('curl'));
+  tabJson.addEventListener('click', () => setMode('json'));
+  sendButton.addEventListener('click', submit);
+  useJsonButton.addEventListener('click', submit);
   generateButton.addEventListener('click', generate);
+
+  curl.addEventListener('input', persist);
+  json.addEventListener('input', persist);
+  className.addEventListener('input', persist);
+
   className.addEventListener('keydown', (event) => {
     if (event.key === 'Enter') {
       generate();
     }
   });
-  curl.addEventListener('keydown', (event) => {
-    if ((event.metaKey || event.ctrlKey) && event.key === 'Enter') {
-      send();
-    }
-  });
+  for (const input of [curl, json]) {
+    input.addEventListener('keydown', (event) => {
+      if ((event.metaKey || event.ctrlKey) && event.key === 'Enter') {
+        submit();
+      }
+    });
+  }
 
   el('copy').addEventListener('click', () =>
     vscode.postMessage({ type: 'copy', text: modelBody.textContent }),
@@ -88,12 +151,16 @@
 
     switch (message.type) {
       case 'requestSend':
-        send();
+        submit();
         break;
 
       case 'requestGenerate':
         if (generateBlock.hidden) {
-          showError('Send a request that returns JSON first.');
+          showError(
+            mode === 'curl'
+              ? 'Send a request that returns JSON first.'
+              : 'Load a JSON object first.',
+          );
         } else {
           className.focus();
         }
@@ -120,16 +187,20 @@
         headersBlock.textContent = Object.entries(message.headers)
           .map(([key, value]) => `${key}: ${value}`)
           .join('\n');
-        responseBlock.hidden = false;
 
-        generateBlock.hidden = !message.canGenerate;
+        afterJson(message, true);
         if (!message.isJson) {
           showError('The response is not valid JSON, so a model cannot be generated from it.');
-        } else if (!message.canGenerate) {
-          showError('The JSON root must be an object. Arrays and primitives are not supported yet.');
         }
         break;
       }
+
+      case 'jsonLoaded':
+        clearError();
+        meta.textContent = '';
+        responseBody.textContent = message.body;
+        afterJson(message, false);
+        break;
 
       case 'model':
         clearError();
@@ -143,12 +214,12 @@
         sendButton.disabled = false;
         status.textContent = '';
         if (message.stage !== 'generate') {
-          responseBlock.hidden = true;
-          generateBlock.hidden = true;
-          modelBlock.hidden = true;
+          resetOutput();
         }
         showError(message.message);
         break;
     }
   });
+
+  setMode(mode);
 })();

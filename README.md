@@ -4,11 +4,13 @@ A VS Code extension: paste a cURL command, send the request, and turn the JSON r
 
 ## Usage
 
-1. Command Palette → **API to Model: New Request**
-2. Paste a cURL command into the panel
-3. **Send** (or `Cmd`/`Ctrl` + `Enter`) — status, timing, headers and pretty-printed JSON come back
-4. **Generate** — enter a root class name (e.g. `LoadDocument`), pick a language
-5. **Copy**, **Insert into editor**, or **Save as file**
+Command Palette → **API to Model: New Request**. The panel takes input two ways:
+
+**cURL tab** — paste a cURL command, hit **Send** (or `Cmd`/`Ctrl` + `Enter`). Status, timing, headers and pretty-printed JSON come back.
+
+**JSON tab** — paste a response you already have. No request is sent; it goes straight to generating.
+
+Either way, **Generate** with a root class name (e.g. `LoadDocument`) and a language, then **Copy**, **Insert into editor**, or **Save as file**.
 
 ## Development
 
@@ -52,13 +54,14 @@ export interface ModelGenerator {
 | JSON | Dart |
 |---|---|
 | `string` | `String?` |
-| integer | `int?` |
-| non-integer number | `double?` |
+| any number | `num?` |
 | `boolean` | `bool?` |
 | object | nested class named after the key, `ClassName?` |
 | array of objects | `List<ClassName>?` |
-| array of primitives | `List<String>?`, `List<int>?`, … |
+| array of primitives | `List<String>?`, `List<num>?`, … |
 | `null` | `String?` — except keys starting `is_`/`has_`, which become `bool?` |
+
+Numbers all become `num?` rather than `int?` or `double?`. JSON has a single number type, and `JSON.parse` returns `1.0` as `1`, so narrowing is a guess that breaks at runtime the first time a field the sample showed as `3` comes back as `3.5`. `num` is the supertype of both, so `int` and `double` payloads parse into the same model. Narrow at the call site with `.toInt()` / `.toDouble()` when you need it.
 
 Every field is nullable, keys are converted `snake_case` → `camelCase` only, and each class gets a named-parameter constructor plus `fromJson` / `toJson`. `test/fixtures/loadDocument.ts` holds the reference case from `CLAUDE.md`; `test/dartGenerator.test.ts` asserts the generator reproduces it byte for byte.
 
@@ -68,7 +71,6 @@ Every field is nullable, keys are converted `snake_case` → `camelCase` only, a
 - Two different objects under the same key name resolve to one class; the first shape wins.
 - Dart reserved words are suffixed with `$` (`class` → `class$`) so the output compiles. The JSON key is untouched.
 - A JSON root that is an array is rejected. See the roadmap.
-- `1.0` arrives from `JSON.parse` as an integer and is typed `int?`.
 
 ## Roadmap
 

@@ -1,0 +1,11 @@
+.vscode/**
+test/**
+node_modules/**
+!node_modules/axios/**
+src/**/*.ts
+src/**/*.map
+out/**/*.map
+tsconfig*.json
+jest.config.js
+.gitignore
+CLAUDE.md

@@ -1,0 +1,58 @@
+{
+  "name": "api-to-model",
+  "displayName": "API to Model",
+  "description": "Paste a cURL command, send the request, and turn the JSON response into model classes (Dart first).",
+  "version": "0.0.1",
+  "publisher": "porto",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Potterjr/api-to-model.git"
+  },
+  "engines": {
+    "vscode": "^1.85.0"
+  },
+  "categories": [
+    "Other"
+  ],
+  "activationEvents": [],
+  "main": "./out/extension.js",
+  "contributes": {
+    "commands": [
+      {
+        "command": "apiToModel.newRequest",
+        "title": "API to Model: New Request"
+      },
+      {
+        "command": "apiToModel.sendRequest",
+        "title": "API to Model: Send Request"
+      },
+      {
+        "command": "apiToModel.generateModel",
+        "title": "API to Model: Generate Model"
+      },
+      {
+        "command": "apiToModel.insertModel",
+        "title": "API to Model: Insert Model into Active Editor"
+      }
+    ]
+  },
+  "scripts": {
+    "vscode:prepublish": "npm run compile",
+    "compile": "tsc -p ./",
+    "watch": "tsc -watch -p ./",
+    "typecheck": "tsc -p ./ --noEmit",
+    "test": "jest"
+  },
+  "dependencies": {
+    "axios": "^1.7.9"
+  },
+  "devDependencies": {
+    "@types/jest": "^29.5.14",
+    "@types/node": "^20.17.10",
+    "@types/vscode": "^1.85.0",
+    "jest": "^29.7.0",
+    "ts-jest": "^29.2.5",
+    "typescript": "^5.7.2"
+  }
+}
